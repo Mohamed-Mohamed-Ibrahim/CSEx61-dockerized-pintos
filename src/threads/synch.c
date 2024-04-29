@@ -237,6 +237,16 @@ lock_release (struct lock *lock)
   //   lock->holder = list_entry (list_pop_front (&lock->holder->list_of_donations), struct thread, elem);
   // }
   // else
+      // After the main thread leaves the lock it has to restore its own priorty
+  if( list_size(&lock->semaphore.waiters) != 0){
+    struct list_elem* maxThreadListItem = list_max (&lock->semaphore.waiters, comparator, NULL);
+
+    struct thread *maxThread = list_entry (maxThreadListItem,struct thread, elem);
+    // printf("\n\n\n%d\n\n\n", maxThread->effective_priority);
+  if( maxThread->priority == lock->holder->effective_priority )
+      lock->holder->effective_priority = lock->holder->priority;
+  }
+
     lock->holder = NULL;
 
 
