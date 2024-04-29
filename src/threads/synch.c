@@ -71,6 +71,7 @@ sema_down (struct semaphore *sema)
       list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
+
   sema->value--;
   intr_set_level (old_level);
 }
@@ -196,11 +197,6 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  msg("ok____________________________________________");
-
-  list_push_back(&lock->holder->list_of_donations, &thread_current()->elem);
-  thread_block ();
-
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
@@ -237,10 +233,10 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  if( !list_empty(&lock->holder->list_of_donations) ){
-    lock->holder = list_entry (list_pop_front (&lock->holder->list_of_donations), struct thread, elem);
-  }
-  else
+  // if( !list_empty(&lock->holder->list_of_donations) ){
+  //   lock->holder = list_entry (list_pop_front (&lock->holder->list_of_donations), struct thread, elem);
+  // }
+  // else
     lock->holder = NULL;
 
 

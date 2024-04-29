@@ -51,6 +51,8 @@ cd ~/pintos/src/threads/
 make clean
 make
 pintos run alarm-multiple
+
+
 ```
 Or, for phase 2
 ```
