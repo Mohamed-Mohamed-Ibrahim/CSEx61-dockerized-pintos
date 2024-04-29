@@ -196,6 +196,8 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  // list_insert(&lock->holder->list_of_donations, thread_current());
+
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
@@ -228,10 +230,16 @@ lock_try_acquire (struct lock *lock)
 void
 lock_release (struct lock *lock) 
 {
+
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock->holder = NULL;
+  if( list_empty(&lock->holder->list_of_donations) )
+    lock->holder = list_pop_front(&lock->holder->list_of_donations);
+  else
+    lock->holder = NULL;
+
+
   sema_up (&lock->semaphore);
 }
 

@@ -91,6 +91,8 @@ struct thread
     
     int effective_priority;
 
+    struct list list_of_donations;
+
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
