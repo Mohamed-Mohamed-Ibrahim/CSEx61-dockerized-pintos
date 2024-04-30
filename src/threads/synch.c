@@ -282,9 +282,9 @@ lock_release (struct lock *lock)
 
   }
 
-  lock->holder = NULL;
   intr_set_level (old_level);
 */
+  lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
 

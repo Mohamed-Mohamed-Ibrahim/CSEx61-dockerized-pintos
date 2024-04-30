@@ -15,6 +15,9 @@
 #include "userprog/process.h"
 #endif
 
+void preemption(void);
+
+
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -189,6 +192,8 @@ thread_create (const char *name, int priority,
   kf->function = function;
   kf->aux = aux;
 
+  t->magic = THREAD_MAGIC;;
+
   struct lock *lock = (struct lock*) aux;
 
   if( lock->holder != NULL ){
@@ -207,6 +212,8 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+
+  preemption();
 
   return tid;
 }
@@ -244,8 +251,11 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  // list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, comparator, NULL);
   t->status = THREAD_READY;
+
+  // schedule();
   intr_set_level (old_level);
 }
 
@@ -346,6 +356,12 @@ thread_set_priority (int new_priority)
 
   thread_current ()->effective_priority = new_priority > thread_current()->effective_priority ? new_priority : thread_current()->effective_priority ;
   
+  if( thread_current ()->effective_priority < new_priority ) {
+    thread_current ()->effective_priority = new_priority;
+    list_sort(&ready_list, comparator, NULL);
+    // schedule();
+  }
+
   intr_set_level (old_level);
 }
 
@@ -454,7 +470,8 @@ running_thread (void)
 static bool
 is_thread (struct thread *t)
 {
-  return t != NULL && t->magic == THREAD_MAGIC;
+  // return t != NULL && t->magic == THREAD_MAGIC;
+  return t != NULL;
 }
 
 /* Does basic initialization of T as a blocked thread named
@@ -473,7 +490,6 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-
 
 
   t->effective_priority = priority;
@@ -601,3 +617,11 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+void preemption(void) {
+
+  if( !list_empty (&ready_list) && list_entry (list_back (&ready_list), struct thread, elem)->priority > thread_get_priority () )
+    thread_yield();
+
+}
