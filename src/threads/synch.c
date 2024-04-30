@@ -41,6 +41,11 @@
 
    - up or "V": increment the value (and wake up one waiting
      thread, if any). */
+
+bool comparator(const struct list_elem *list_elem_1,
+                const struct list_elem *list_elem_2,
+                void *aux UNUSED);
+
 void
 sema_init (struct semaphore *sema, unsigned value) 
 {
@@ -196,7 +201,32 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+ /*
+  enum intr_level old_level = intr_disable ();
+  struct thread* current_thread = thread_current();
 
+  struct lock* temp = lock;
+
+  // Stone waited lock
+  if( lock->holder != NULL ) {
+
+    current_thread->wait_on_lock = lock;
+
+  }
+
+  // Donate Priority to all holders -> nested 
+  // Add the thread to the donations_list of all parents
+  while( temp->holder != NULL ) {
+
+    if( temp->holder->effective_priority < current_thread->effective_priority ) {
+      temp->holder->effective_priority = current_thread->effective_priority;
+    }
+    list_insert_ordered(&temp->holder->donations_list, &temp->holder->elem, comparator, NULL);
+    temp = temp->holder;
+
+  }
+  intr_set_level (old_level);
+*/
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
@@ -233,23 +263,28 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  // if( !list_empty(&lock->holder->list_of_donations) ){
-  //   lock->holder = list_entry (list_pop_front (&lock->holder->list_of_donations), struct thread, elem);
-  // }
-  // else
-      // After the main thread leaves the lock it has to restore its own priorty
+/*
+  enum intr_level old_level = intr_disable ();
+
+  // After the main thread leaves the lock it has to restore its own priorty
   if( list_size(&lock->semaphore.waiters) != 0){
+    
     struct list_elem* maxThreadListItem = list_max (&lock->semaphore.waiters, comparator, NULL);
 
     struct thread *maxThread = list_entry (maxThreadListItem,struct thread, elem);
-    // printf("\n\n\n%d\n\n\n", maxThread->effective_priority);
-  if( maxThread->priority == lock->holder->effective_priority )
-      lock->holder->effective_priority = lock->holder->priority;
+
+    maxThread->wait_on_lock = NULL;
+
+    list_remove();
+
+    if( maxThread->effective_priority == lock->holder->effective_priority )
+        lock->holder->effective_priority = lock->holder->effective_priority;
+
   }
 
-    lock->holder = NULL;
-
-
+  lock->holder = NULL;
+  intr_set_level (old_level);
+*/
   sema_up (&lock->semaphore);
 }
 
@@ -353,4 +388,13 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+bool
+comparator (const struct list_elem *list_elem_1,
+                const struct list_elem *list_elem_2,
+                void *aux UNUSED)
+{
+  return list_entry (list_elem_1, struct thread, elem)->effective_priority >=
+         list_entry (list_elem_2, struct thread, elem)->effective_priority;
 }

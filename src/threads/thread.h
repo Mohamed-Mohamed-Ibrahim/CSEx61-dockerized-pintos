@@ -91,7 +91,9 @@ struct thread
     
     int effective_priority;
 
-    struct list list_of_donations;
+    struct list donations_list;
+      
+   struct lock* wait_on_lock;
 
     struct list_elem allelem;           /* List element for all threads list. */
 
